@@ -1,7 +1,10 @@
 $fontStack:     Helvetica, sans-serif;
-$primaryColor: #332;
+$primaryColor: #f00;
 
 body{
   font-family: $fontStack;
   color: $primaryColor;
+  border-radius: 5px;
+  display: flex;
+  opacity:0.5;
 }

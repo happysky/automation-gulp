@@ -1,7 +1,13 @@
 <!-- common js -->
-<script type="text/javascript" src="js/jquery-2.1.4.min.js"></script>
 <script type="text/javascript" src="js/main.js?rev=@@hash"></script>
 <script>
+    (function(){
+        var abc = 'abc';
+        var b = function(){
+            console.log(abc);
+        };
+        b();
+    })();
 </script>
 </body>
 </html>

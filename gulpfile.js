@@ -19,7 +19,8 @@ var gulp = require('gulp'), // 必须先引入gulp插件
     imagemin = require('gulp-imagemin'), // 图片优化
     browserSync = require('browser-sync'), // 保存自动刷新
     fileinclude = require('gulp-file-include'), // 可以 include html 文件
-    autoprefixer = require('gulp-autoprefixer'); // 添加 CSS 浏览器前缀
+    autoprefixer = require('gulp-autoprefixer'), // 添加 CSS 浏览器前缀
+    htmlmin = require('gulp-htmlmin'); //压缩html
 
 // sass
 gulp.task('sass', function() {
@@ -82,6 +83,11 @@ gulp.task('html', function () {
     gulp.src('src/*.html')
         .pipe(fileinclude()) // include html
         .pipe(rev()) // 生成并插入 MD5
+        .pipe(htmlmin({
+            collapseWhitespace: true,
+            minifyCSS: true,
+            minifyJS: true
+        }))
         .pipe(gulp.dest('dist/'));
 });
 
