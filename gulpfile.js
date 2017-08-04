@@ -14,13 +14,14 @@ var gulp = require('gulp'), // 必须先引入gulp插件
     notify = require('gulp-notify'), // 相当于 console.log()
     filter = require('gulp-filter'), // 过滤筛选指定文件
     jshint = require('gulp-jshint'), // js 语法校验
-    rev = require('gulp-rev-append'), // 插入文件指纹（MD5）
     cssnano = require('gulp-cssnano'), // CSS 压缩
     imagemin = require('gulp-imagemin'), // 图片优化
     browserSync = require('browser-sync'), // 保存自动刷新
     fileinclude = require('gulp-file-include'), // 可以 include html 文件
     autoprefixer = require('gulp-autoprefixer'), // 添加 CSS 浏览器前缀
-    htmlmin = require('gulp-htmlmin'); //压缩html
+    htmlmin = require('gulp-htmlmin'), //压缩html
+    rev = require('gulp-rev'), //生成版本号
+    revReplace = require('gulp-rev-replace'); //添加版本号
 
 // sass
 gulp.task('sass', function() {
@@ -29,7 +30,7 @@ gulp.task('sass', function() {
         .pipe(sass({outputStyle: 'expanded'})) // 编译 sass 并设置输出格式
         .pipe(autoprefixer('last 5 version')) // 添加 CSS 浏览器前缀，兼容最新的5个版本
         .pipe(gulp.dest('dist/css')) // 输出到 dist/css 目录下（不影响此时管道里的文件流）
-        .pipe(rename({suffix: '.min'})) // 对管道里的文件流添加 .min 的重命名
+        //.pipe(rename({suffix: '.min'})) // 对管道里的文件流添加 .min 的重命名
         .pipe(cssnano()) // 压缩 CSS
         .pipe(gulp.dest('dist/css')) // 输出到 dist/css 目录下，此时每个文件都有压缩（*.min.css）和未压缩(*.css)两个版本
 });
@@ -42,7 +43,7 @@ gulp.task('css', function() {
         .pipe(filter(['**/*', '!*.min.css'])) // 筛选出管道中的非 *.min.css 文件
         .pipe(autoprefixer('last 5 version'))
         .pipe(gulp.dest('dist/css')) // 把处理过的 css 输出到 dist/css 目录
-        .pipe(rename({suffix: '.min'}))
+        //.pipe(rename({suffix: '.min'}))
         .pipe(cssnano())
         .pipe(gulp.dest('dist/css'))
 });
@@ -64,7 +65,7 @@ gulp.task('script', function() {
         // .pipe(jshint.reporter('default'))
         // .pipe(concat('main.js'))
         // .pipe(gulp.dest('dist/js'))
-        .pipe(rename({suffix: '.min'}))
+        //.pipe(rename({suffix: '.min'}))
         .pipe(uglify())
         .pipe(gulp.dest('dist/js'))
 });
@@ -82,12 +83,45 @@ gulp.task('image', function() {
 gulp.task('html', function () {
     gulp.src('src/*.html')
         .pipe(fileinclude()) // include html
-        .pipe(rev()) // 生成并插入 MD5
         .pipe(htmlmin({
             collapseWhitespace: true,
             minifyCSS: true,
             minifyJS: true
         }))
+        .pipe(gulp.dest('dist/'));
+});
+
+gulp.task("revision", function() {
+    return gulp.src(['dist/**/*'])
+        .pipe(rev())
+        .pipe(rev.manifest({
+            transformer: {
+                parse: function(){
+                },
+                stringify: function(version){
+                    for(var i in version){
+                        var fileNames = i.split(".");
+                        var fileName = fileNames.splice(0,1)[0];
+                        var extentsionName = fileNames.join(".");
+                        if(extentsionName == 'html'){
+                            delete version[i];
+                            continue;
+                        }
+                        var hash = version[i].replace(fileName + "-", "").replace("."+extentsionName, "");
+                        version[i] = i + "?v=" + hash;
+                    }
+                    return JSON.stringify(version);
+                }
+            }
+        }))
+        .pipe(gulp.dest('dist/'));
+});
+
+gulp.task("revreplace", ["revision"], function(){
+    var manifest = gulp.src("dist/rev-manifest.json");
+
+    return gulp.src("dist/**/*")
+        .pipe(revReplace({manifest: manifest}))
         .pipe(gulp.dest('dist/'));
 });
 
@@ -97,8 +131,8 @@ gulp.task('clean', function() {
 });
 
 // build 需要插入资源指纹（MD5），html 最后执行
-gulp.task('build', ['sass', 'css', 'script', 'image'], function () {
-    gulp.start('html');
+gulp.task('build', ['sass', 'css', 'script', 'image', 'html'], function () {
+    gulp.start('revreplace');
 });
 
 // default 默认任务，依赖清空任务
@@ -123,7 +157,7 @@ gulp.task('watch', function() {
     // 监控图片文件，有变动则执行 image 任务
     gulp.watch('src/img/**/*', ['image']);
     // 监控 html 文件，有变动则执行 html 任务
-    gulp.watch('src/**/*.html', ['html']);
+    gulp.watch('src/**/*.html', ['html','revreplace']);
     // 监控 dist 目录下除 css 目录以外的变动（如js，图片等），则自动刷新页面
     gulp.watch(['dist/**/*', '!dist/css/**/*']).on('change', browserSync.reload);
 

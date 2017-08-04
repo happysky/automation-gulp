@@ -3,4 +3,5 @@
  */
 function test(){
     alert('ddd');
+    console.log('xxx');
 }
